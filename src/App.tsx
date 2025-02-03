@@ -1,81 +1,114 @@
-import type React from "react"
-import { useState, useEffect, useCallback } from "react"
-import FilterTabs from "./components/FilterTabs"
-import TaskForm from "./components/TaskForm"
+import { useState, useEffect } from "react"
 import TaskList from "./components/TaskList"
-import Modal from "./components/Modal"
-import type { Task } from "./types/Task"
+import TaskModal from "./components/TaskModal"
+import type { Task } from "./types"
 import "./styles.css"
 
-const App: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    const savedTasks = localStorage.getItem("tasks")
-    return savedTasks ? JSON.parse(savedTasks) : []
-  })
-
-  const [filter, setFilter] = useState(() => {
-    return sessionStorage.getItem("filter") || "all"
-  })
-
+function App() {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [filter, setFilter] = useState<"all" | "active" | "completed">("all")
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+
+  useEffect(() => {
+    const storedTasks = localStorage.getItem("tasks")
+    if (storedTasks) {
+      setTasks(JSON.parse(storedTasks))
+    }
+  }, [])
 
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks))
   }, [tasks])
 
-  useEffect(() => {
-    sessionStorage.setItem("filter", filter)
-  }, [filter])
-
-  const addTask = useCallback((title: string) => {
-    const newTask: Task = {
-      id: Date.now(),
-      title,
-      completed: false,
-      createdAt: new Date().toISOString(),
+  const handleTaskSubmit = (taskData: { name: string; description: string } | Task) => {
+    if ("id" in taskData) {
+      // Actualizando una tarea existente
+      setTasks(tasks.map((task) => (task.id === taskData.id ? taskData : task)))
+    } else {
+      // Creando una nueva tarea
+      const newTask: Task = {
+        id: Date.now().toString(),
+        name: taskData.name,
+        description: taskData.description,
+        status: "active",
+      }
+      setTasks([...tasks, newTask])
     }
-    setTasks((prevTasks) => [...prevTasks, newTask])
-  }, [])
+    setIsModalOpen(false)
+    setEditingTask(null)
+  }
 
-  const toggleTask = useCallback((id: number) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((task) => {
-        if (task.id === id) {
-          const completedAt = !task.completed ? new Date().toISOString() : undefined
-          return {
-            ...task,
-            completed: !task.completed,
-            completedAt,
-          }
-        }
-        return task
-      }),
+  const toggleTask = (id: string) => {
+    setTasks(
+      tasks.map((task) =>
+        task.id === id ? { ...task, status: task.status === "active" ? "completed" : "active" } : task,
+      ),
     )
-  }, [])
+  }
 
-  const deleteTask = useCallback((id: number) => {
-    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id))
-  }, [])
+  const deleteTask = (id: string) => {
+    setTasks(tasks.filter((task) => task.id !== id))
+  }
+
+  const openEditModal = (task: Task) => {
+    setEditingTask(task)
+    setIsModalOpen(true)
+  }
 
   const filteredTasks = tasks.filter((task) => {
-    if (filter === "active") return !task.completed
-    if (filter === "completed") return task.completed
-    return true
+    if (filter === "all") return true
+    return task.status === filter
   })
-
-  const openModal = useCallback((task: Task) => {
-    setSelectedTask(task)
-    setIsModalOpen(true)
-  }, [])
 
   return (
     <div className="todo-app">
-      <h1>Todo App</h1>
-      <TaskForm onAddTask={addTask} />
-      <FilterTabs filter={filter} onSetFilter={setFilter} />
-      <TaskList tasks={filteredTasks} onToggleTask={toggleTask} onDeleteTask={deleteTask} onOpenModal={openModal} />
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} task={selectedTask} />
+      <h1>ToDo App</h1>
+
+      <div className="app-controls">
+        <button
+          onClick={() => {
+            setEditingTask(null)
+            setIsModalOpen(true)
+          }}
+          className="add-button"
+        >
+          + Crear Tarea
+        </button>
+
+        <div className="tabs">
+          <button onClick={() => setFilter("all")} className={`tab-button ${filter === "all" ? "active" : ""}`}>
+            All
+          </button>
+          <button onClick={() => setFilter("active")} className={`tab-button ${filter === "active" ? "active" : ""}`}>
+            Active
+          </button>
+          <button
+            onClick={() => setFilter("completed")}
+            className={`tab-button ${filter === "completed" ? "active" : ""}`}
+          >
+            Completed
+          </button>
+        </div>
+      </div>
+
+      <div className="task-header">
+        <span>Status</span>
+        <span>Tarea</span>
+        <span>Acciones</span>
+      </div>
+
+      <TaskList tasks={filteredTasks} onToggle={toggleTask} onDelete={deleteTask} onEdit={openEditModal} />
+
+      <TaskModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setEditingTask(null)
+        }}
+        onSubmit={handleTaskSubmit}
+        task={editingTask}
+      />
     </div>
   )
 }

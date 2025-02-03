@@ -1,25 +1,31 @@
 import type React from "react"
-import type { Task } from "../types/Task"
+import type { Task } from "../types"
 
 interface TaskListProps {
   tasks: Task[]
-  onToggleTask: (id: number) => void
-  onDeleteTask: (id: number) => void
-  onOpenModal: (task: Task) => void
+  onToggle: (id: string) => void
+  onDelete: (id: string) => void
+  onEdit: (task: Task) => void
 }
 
-const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onDeleteTask, onOpenModal }) => {
+const TaskList: React.FC<TaskListProps> = ({ tasks, onToggle, onDelete, onEdit }) => {
   return (
     <ul className="task-list">
       {tasks.map((task) => (
         <li key={task.id} className="task-item">
-          <input type="checkbox" checked={task.completed} onChange={() => onToggleTask(task.id)} />
-          <span onClick={() => onOpenModal(task)} className={task.completed ? "completed" : ""}>
-            {task.title}
-          </span>
-          <button onClick={() => onDeleteTask(task.id)} className="delete-button">
-            ×
-          </button>
+          <input type="checkbox" checked={task.status === "completed"} onChange={() => onToggle(task.id)} />
+          <div className="task-content">
+            <span className={task.status === "completed" ? "completed" : ""}>{task.name}</span>
+            <p className="task-description">{task.description}</p>
+          </div>
+          <div className="task-actions">
+            <button className="edit-button" onClick={() => onEdit(task)}>
+              ✎
+            </button>
+            <button onClick={() => onDelete(task.id)} className="delete-button">
+              ×
+            </button>
+          </div>
         </li>
       ))}
     </ul>
