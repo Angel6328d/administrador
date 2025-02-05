@@ -1,60 +1,58 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { AnimatePresence } from "framer-motion"
 import TaskList from "./components/TaskList"
 import TaskModal from "./components/TaskModal"
+import FilterTabs from "./components/FilterTabs"
 import type { Task } from "./types"
 import "./styles.css"
 
+export type FilterType = "all" | "active" | "completed"
+
 function App() {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [filter, setFilter] = useState<"all" | "active" | "completed">("all")
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const storedTasks = localStorage.getItem("tasks")
+    return storedTasks ? JSON.parse(storedTasks) : []
+  })
+  const [filter, setFilter] = useState<FilterType>("all")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
-
-  useEffect(() => {
-    const storedTasks = localStorage.getItem("tasks")
-    if (storedTasks) {
-      setTasks(JSON.parse(storedTasks))
-    }
-  }, [])
 
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks))
   }, [tasks])
 
-  const handleTaskSubmit = (taskData: { name: string; description: string } | Task) => {
+  const handleTaskSubmit = useCallback((taskData: { name: string; description: string } | Task) => {
     if ("id" in taskData) {
-      // Actualizando una tarea existente
-      setTasks(tasks.map((task) => (task.id === taskData.id ? taskData : task)))
+      setTasks((prevTasks) => prevTasks.map((task) => (task.id === taskData.id ? taskData : task)))
     } else {
-      // Creando una nueva tarea
       const newTask: Task = {
         id: Date.now().toString(),
         name: taskData.name,
         description: taskData.description,
         status: "active",
       }
-      setTasks([...tasks, newTask])
+      setTasks((prevTasks) => [...prevTasks, newTask])
     }
     setIsModalOpen(false)
     setEditingTask(null)
-  }
+  }, [])
 
-  const toggleTask = (id: string) => {
-    setTasks(
-      tasks.map((task) =>
+  const toggleTask = useCallback((id: string) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
         task.id === id ? { ...task, status: task.status === "active" ? "completed" : "active" } : task,
       ),
     )
-  }
+  }, [])
 
-  const deleteTask = (id: string) => {
-    setTasks(tasks.filter((task) => task.id !== id))
-  }
+  const deleteTask = useCallback((id: string) => {
+    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id))
+  }, [])
 
-  const openEditModal = (task: Task) => {
+  const openEditModal = useCallback((task: Task) => {
     setEditingTask(task)
     setIsModalOpen(true)
-  }
+  }, [])
 
   const filteredTasks = tasks.filter((task) => {
     if (filter === "all") return true
@@ -63,7 +61,7 @@ function App() {
 
   return (
     <div className="todo-app">
-      <h1>Administrador</h1>
+      <h1>Administrador de Tareas</h1>
 
       <div className="app-controls">
         <button
@@ -76,20 +74,7 @@ function App() {
           + Crear Tarea
         </button>
 
-        <div className="tabs">
-          <button onClick={() => setFilter("all")} className={`tab-button ${filter === "all" ? "active" : ""}`}>
-            All
-          </button>
-          <button onClick={() => setFilter("active")} className={`tab-button ${filter === "active" ? "active" : ""}`}>
-            Active
-          </button>
-          <button
-            onClick={() => setFilter("completed")}
-            className={`tab-button ${filter === "completed" ? "active" : ""}`}
-          >
-            Completed
-          </button>
-        </div>
+        <FilterTabs filter={filter} onSetFilter={setFilter} />
       </div>
 
       <div className="task-header">
@@ -98,7 +83,9 @@ function App() {
         <span>Acciones</span>
       </div>
 
-      <TaskList tasks={filteredTasks} onToggle={toggleTask} onDelete={deleteTask} onEdit={openEditModal} />
+      <AnimatePresence>
+        <TaskList tasks={filteredTasks} onToggle={toggleTask} onDelete={deleteTask} onEdit={openEditModal} />
+      </AnimatePresence>
 
       <TaskModal
         isOpen={isModalOpen}

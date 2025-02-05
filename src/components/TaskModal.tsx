@@ -12,6 +12,7 @@ interface TaskModalProps {
 const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }) => {
   const [taskName, setTaskName] = useState("")
   const [taskDescription, setTaskDescription] = useState("")
+  const [error, setError] = useState("")
 
   useEffect(() => {
     if (task) {
@@ -21,22 +22,19 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
       setTaskName("")
       setTaskDescription("")
     }
+    setError("")
   }, [task])
-
-  if (!isOpen) return null
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (taskName.trim()) {
       if (task) {
-        // Si estamos editando, enviamos la tarea completa actualizada
         onSubmit({
           ...task,
           name: taskName.trim(),
           description: taskDescription.trim(),
         })
       } else {
-        // Si estamos creando, enviamos solo los campos necesarios
         onSubmit({
           name: taskName.trim(),
           description: taskDescription.trim(),
@@ -44,8 +42,13 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
       }
       setTaskName("")
       setTaskDescription("")
+      setError("")
+    } else {
+      setError("El nombre de la tarea no puede estar vacío")
     }
   }
+
+  if (!isOpen) return null
 
   return (
     <div className="modal-overlay">
@@ -56,30 +59,32 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
             &times;
           </button>
         </div>
-        <div className="modal-body">
-          <form onSubmit={handleSubmit}>
-            <input
-              type="text"
-              value={taskName}
-              onChange={(e) => setTaskName(e.target.value)}
-              placeholder="Nombre de la tarea"
-              className="task-input"
-              autoFocus
-            />
-            <textarea
-              value={taskDescription}
-              onChange={(e) => setTaskDescription(e.target.value)}
-              placeholder="Descripción de la tarea"
-              className="task-input"
-              rows={3}
-            />
-            <div style={{ marginTop: "15px" }}>
-              <button type="submit" className="add-button">
-                {task ? "Actualizar" : "Crear"}
-              </button>
-            </div>
-          </form>
-        </div>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            value={taskName}
+            onChange={(e) => setTaskName(e.target.value)}
+            placeholder="Nombre de la tarea"
+            className="task-input"
+            autoFocus
+          />
+          <textarea
+            value={taskDescription}
+            onChange={(e) => setTaskDescription(e.target.value)}
+            placeholder="Descripción de la tarea"
+            className="task-input"
+            rows={3}
+          />
+          {error && <p className="text-red-500">{error}</p>}
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="button" onClick={onClose} className="add-button">
+              Cancelar
+            </button>
+            <button type="submit" className="add-button">
+              {task ? "Actualizar" : "Crear"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )

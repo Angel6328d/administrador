@@ -1,4 +1,5 @@
 import type React from "react"
+import { motion } from "framer-motion"
 import type { Task } from "../types"
 
 interface TaskListProps {
@@ -12,7 +13,13 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onToggle, onDelete, onEdit }
   return (
     <ul className="task-list">
       {tasks.map((task) => (
-        <li key={task.id} className="task-item">
+        <motion.li
+          key={task.id}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="task-item"
+        >
           <input type="checkbox" checked={task.status === "completed"} onChange={() => onToggle(task.id)} />
           <div className="task-content">
             <span className={task.status === "completed" ? "completed" : ""}>{task.name}</span>
@@ -26,7 +33,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onToggle, onDelete, onEdit }
               ×
             </button>
           </div>
-        </li>
+        </motion.li>
       ))}
     </ul>
   )
